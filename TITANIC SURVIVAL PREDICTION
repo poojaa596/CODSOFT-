@@ -1,0 +1,98 @@
+# Import libraries
+import pandas as pd
+import numpy as np
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+from google.colab import files
+
+# Upload the Titanic dataset
+print("Please upload the Titanic dataset (CSV format):")
+uploaded = files.upload()
+# Load the uploaded dataset
+file_name = list(uploaded.keys())[0]
+titanic_data = pd.read_csv(file_name)
+
+# Data preprocessing
+titanic_data.drop(['PassengerId', 'Name', 'Ticket', 'Cabin'], axis=1, inplace=True)
+titanic_data['Age'].fillna(titanic_data['Age'].median(), inplace=True)
+titanic_data['Embarked'].fillna(titanic_data['Embarked'].mode()[0], inplace=True)
+
+# Encode categorical features
+label_encoder = LabelEncoder()
+titanic_data['Sex'] = label_encoder.fit_transform(titanic_data['Sex'])
+titanic_data['Embarked'] = label_encoder.fit_transform(titanic_data['Embarked'])
+# Display basic info
+print("\nDataset Info:")
+print(titanic_data.info())
+print("\nMissing Values:")
+print(titanic_data.isnull().sum())
+# Handle missing values
+titanic_data['Age'].fillna(titanic_data['Age'].median(), inplace=True)
+titanic_data['Embarked'].fillna(titanic_data['Embarked'].mode()[0], inplace=True)
+
+# Encode categorical features
+label_encoder = LabelEncoder()
+titanic_data['Sex'] = label_encoder.fit_transform(titanic_data['Sex'])
+titanic_data['Embarked'] = label_encoder.fit_transform(titanic_data['Embarked'])
+
+# Define features (X) and target (y)
+X = titanic_data.drop('Survived', axis=1)
+y = titanic_data['Survived']
+
+# Split the data into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Standardize numerical features
+scaler = StandardScaler()
+X_train[['Age', 'Fare']] = scaler.fit_transform(X_train[['Age', 'Fare']])
+X_test[['Age', 'Fare']] = scaler.transform(X_test[['Age', 'Fare']])
+
+# Build the model
+model = RandomForestClassifier(random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+print("\nModel Performance:")
+print("Accuracy:", accuracy_score(y_test, y_pred))
+print("\nClassification Report:")
+print(classification_report(y_test, y_pred))
+print("\nConfusion Matrix:")
+print(confusion_matrix(y_test, y_pred))
+
+# Visualization: Survival Rates by Feature
+
+# 1. Survival by Gender
+sns.countplot(data=titanic_data, x='Survived', hue='Sex', palette='Set2')
+plt.title('Survival Count by Gender')
+plt.legend(['Female', 'Male'])
+plt.show()
+
+# 2. Survival by Passenger Class
+sns.countplot(data=titanic_data, x='Pclass', hue='Survived', palette='Set3')
+plt.title('Survival Count by Passenger Class')
+plt.legend(['Did Not Survive', 'Survived'])
+plt.show()
+
+# 3. Age Distribution by Survival
+sns.histplot(data=titanic_data, x='Age', hue='Survived', kde=True, bins=30, palette='coolwarm')
+plt.title('Age Distribution by Survival')
+plt.show()
+
+# 4. Fare Distribution by Survival
+sns.boxplot(data=titanic_data, x='Survived', y='Fare', palette='pastel')
+plt.title('Fare Distribution by Survival')
+plt.xticks([0, 1], ['Did Not Survive', 'Survived'])
+plt.show()
+
+# 5. Survival by Embarkation Port
+sns.countplot(data=titanic_data, x='Embarked', hue='Survived', palette='husl')
+plt.title('Survival Count by Embarkation Port')
+plt.legend(['Did Not Survive', 'Survived'])
+plt.show()
