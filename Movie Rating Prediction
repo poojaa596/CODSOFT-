@@ -9,6 +9,11 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_squared_error, r2_score
 from google.colab import files
 uploaded = files.upload()
+# Read the dataset with encoding handling
+try:
+    data = pd.read_csv(file_name, encoding="ISO-8859-1")
+except UnicodeDecodeError:
+    data = pd.read_csv(file_name, encoding="latin1")
 # Get the filename dynamically
 file_name = list(uploaded.keys())[0]
 # Strip spaces from column names
@@ -67,11 +72,6 @@ mse = mean_squared_error(y_test, y_pred)
 r2 = r2_score(y_test, y_pred)
 print(f"Mean Squared Error: {mse}")
 print(f"R² Score: {r2}")
-# Read the dataset with encoding handling
-try:
-    data = pd.read_csv(file_name, encoding="ISO-8859-1")
-except UnicodeDecodeError:
-    data = pd.read_csv(file_name, encoding="latin1")
 #  Histogram: Distribution of Movie Ratings
 plt.figure(figsize=(8, 5))
 sns.histplot(data['Rating'], bins=20, kde=True, color='skyblue')
