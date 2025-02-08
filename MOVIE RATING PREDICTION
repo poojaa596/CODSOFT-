@@ -1,0 +1,145 @@
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+import numpy as np
+import seaborn as sns
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, r2_score
+from google.colab import files
+uploaded = files.upload()
+# Get the filename dynamically
+file_name = list(uploaded.keys())[0]
+# Strip spaces from column names
+data.columns = data.columns.str.strip()
+
+# Drop unnecessary columns
+data = data.drop(columns=['Name', 'Year'], errors='ignore')
+
+# Convert Duration to numerical (extracting minutes)
+data['Duration'] = data['Duration'].str.extract('(\d+)').astype(float)
+
+# Convert Votes to numerical
+data['Votes'] = pd.to_numeric(data['Votes'], errors='coerce')
+
+# Fill missing values
+data = data.dropna(subset=['Rating'])  # Drop rows where Rating (target) is missing
+data.fillna({'Duration': data['Duration'].median(), 'Votes': data['Votes'].median()}, inplace=True)
+
+# Combine Actor columns into one categorical feature
+data['Actors'] = data[['Actor 1', 'Actor 2', 'Actor 3']].astype(str).agg(' '.join, axis=1)
+data = data.drop(columns=['Actor 1', 'Actor 2', 'Actor 3'])
+
+# Encode categorical features
+categorical_columns = ['Genre', 'Director', 'Actors']
+label_encoders = {}
+for col in categorical_columns:
+    le = LabelEncoder()
+    data[col] = le.fit_transform(data[col].astype(str))  # Convert to string before encoding
+    label_encoders[col] = le
+
+# Define features and target variable
+X = data.drop(columns=['Rating'])
+y = data['Rating']
+
+# Split data into train and test sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Scale features
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+# Train a RandomForestRegressor model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Display dataset info
+print("Available columns:", data.columns)
+print(data.head())
+print(data.info())
+# Evaluate the model
+mse = mean_squared_error(y_test, y_pred)
+r2 = r2_score(y_test, y_pred)
+print(f"Mean Squared Error: {mse}")
+print(f"R² Score: {r2}")
+# Read the dataset with encoding handling
+try:
+    data = pd.read_csv(file_name, encoding="ISO-8859-1")
+except UnicodeDecodeError:
+    data = pd.read_csv(file_name, encoding="latin1")
+#  Histogram: Distribution of Movie Ratings
+plt.figure(figsize=(8, 5))
+sns.histplot(data['Rating'], bins=20, kde=True, color='skyblue')
+plt.xlabel("Movie Ratings")
+plt.ylabel("Frequency")
+plt.title("Distribution of Movie Ratings")
+plt.show()
+ ### Top Directors by Average Rating ###
+top_directors_rating = data.groupby('Director')['Rating'].mean().sort_values(ascending=False).head(10)
+plt.figure(figsize=(12, 6))
+sns.barplot(x=top_directors_rating.index, y=top_directors_rating.values, palette="coolwarm")
+plt.xticks(rotation=90)
+plt.xlabel("Director")
+plt.ylabel("Average Rating")
+plt.title("Top 10 Directors by Average Movie Rating")
+plt.show()
+###  Top Actors by Average Rating ###
+    # Combine all actor columns into one long format
+actors = pd.melt(data, id_vars=['Rating'], value_vars=['Actor 1', 'Actor 2', 'Actor 3'], var_name="Actor Position", value_name="Actor")
+top_actors_rating = actors.groupby('Actor')['Rating'].mean().sort_values(ascending=False).head(10)
+plt.figure(figsize=(10, 6))
+sns.barplot(x=top_actors_rating.index, y=top_actors_rating.values, palette="magma")
+plt.xticks(rotation=90)
+plt.xlabel("Actor")
+plt.ylabel("Average Rating")
+plt.title("Top 10 Actors by Average Movie Rating")
+plt.show()
+# Ensure required columns exist
+required_columns = ['Director', 'Votes', 'Rating', 'Actor 1', 'Actor 2', 'Actor 3']
+missing_columns = [col for col in required_columns if col not in data.columns]
+if missing_columns:
+    print(f"Error: Missing columns in dataset: {missing_columns}")
+else:
+    # 🔹 Convert 'Votes' to numeric (handling '$', 'M' for millions, 'K' for thousands)
+    def clean_votes(value):
+        value = str(value).replace(',', '').replace('$', '')  # Remove commas & $
+        if 'M' in value:  # Convert "5.16M" → 5,160,000
+            return float(value.replace('M', '')) * 1_000_000
+        elif 'K' in value:  # Convert "5.2K" → 5,200
+            return float(value.replace('K', '')) * 1_000
+        elif value.replace('.', '', 1).isdigit():  # Convert plain numbers
+            return float(value)
+        else:
+            return None  # If not a number, return None (NaN)
+
+    data['Votes'] = data['Votes'].apply(clean_votes)
+ ###  Top Directors by Total Votes ###
+    top_directors_votes = data.groupby('Director')['Votes'].sum().sort_values(ascending=False).head(10)
+
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x=top_directors_votes.index, y=top_directors_votes.values, palette="viridis")
+    plt.xticks(rotation=90)
+    plt.xlabel("Director")
+    plt.ylabel("Total Votes")
+    plt.title("Top 10 Directors by Total Votes")
+    plt.show()
+
+    ###  Top Actors by Total Votes ###
+    # Merge votes data with actors
+    actors_votes = pd.melt(data, id_vars=['Votes'], value_vars=['Actor 1', 'Actor 2', 'Actor 3'], 
+                           var_name="Actor Position", value_name="Actor")
+    top_actors_votes = actors_votes.groupby('Actor')['Votes'].sum().sort_values(ascending=False).head(10)
+
+    plt.figure(figsize=(12, 6))
+    sns.barplot(x=top_actors_votes.index, y=top_actors_votes.values, palette="cividis")
+    plt.xticks(rotation=90)
+    plt.xlabel("Actor")
+    plt.ylabel("Total Votes")
+    plt.title("Top 10 Actors by Total Votes")
+    plt.show()
+
